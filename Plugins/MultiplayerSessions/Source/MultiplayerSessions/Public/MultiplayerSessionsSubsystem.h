@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Interfaces/OnlineSessionInterface.h"
+
 #include "MultiplayerSessionsSubsystem.generated.h"
 
 /**
@@ -14,4 +16,12 @@ class UMultiplayerSessionsSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 	
+public:
+	UMultiplayerSessionsSubsystem();
+
+protected:
+
+private:
+	IOnlineSessionPtr SessionInterface;
+
 };
