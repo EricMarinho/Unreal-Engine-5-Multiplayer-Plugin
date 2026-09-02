@@ -39,14 +39,14 @@ private:
 
 	bool bIsLanSubsystem = false;
 
-	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
-	FDelegateHandle CreateSessionCompleteDelegateHandle;
+	FOnCreateSessionCompleteDelegate CreateSeassionCompleteDelegate;
+	FDelegateHandle CreateSeassionCompleteDelegateHandle;
 	FOnFindSessionsCompleteDelegate FindSessionsCompleteDelegate;
-	FDelegateHandle FindSessionsCompleteDelegateHandle;
+	FDelegateHandle FindSeassionCompleteDelegateHandle;
 	FOnJoinSessionCompleteDelegate JoinSessionCompleteDelegate;
-	FDelegateHandle JoinSessionCompleteDelegateHandle;
+	FDelegateHandle JoinSeassionCompleteDelegateHandle;
 	FOnDestroySessionCompleteDelegate DestroySessionCompleteDelegate;
-	FDelegateHandle DestroySessionCompleteDelegateHandle;
+	FDelegateHandle DestroySeassionCompleteDelegateHandle;
 	FOnStartSessionCompleteDelegate StartSessionCompleteDelegate;
-	FDelegateHandle StartSessionCompleteDelegateHandle;
+	FDelegateHandle StartSeassionCompleteDelegateHandle;
 };

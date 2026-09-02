@@ -61,6 +61,15 @@ void UMenu::MenuSetup(int32 NumberOfPulbicConnections, FString TypeOfMatch)
 
 void UMenu::HostButtonClicked()
 {
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			15.f,
+			FColor::Cyan,
+			FString(TEXT("Host Button Clicked"))
+		);
+	}
 	if (MultiplayerSubsessionSystem) {
 		MultiplayerSubsessionSystem->CreateSession(NumPublic, MatchType);
 	}
@@ -68,6 +77,15 @@ void UMenu::HostButtonClicked()
 
 void UMenu::JoinButtonClicked()
 {
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			15.f,
+			FColor::Green,
+			FString(TEXT("Join Button Clicked"))
+		);
+	}
 	if (MultiplayerSubsessionSystem) {
 		MultiplayerSubsessionSystem->FindSessions(10000);
 	}

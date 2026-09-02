@@ -8,7 +8,7 @@
 #include "Online/OnlineSessionNames.h"
 
 UMultiplayerSessionsSubsystem::UMultiplayerSessionsSubsystem():
-	CreateSessionCompleteDelegate(FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete)),
+	CreateSeassionCompleteDelegate(FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete)),
 	FindSessionsCompleteDelegate(FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsComplete)),
 	JoinSessionCompleteDelegate(FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionComplete)),
 	DestroySessionCompleteDelegate(FOnDestroySessionCompleteDelegate::CreateUObject(this,&ThisClass::OnDestroySessionComplete)),
@@ -36,7 +36,7 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 		SessionInterface->DestroySession(NAME_GameSession);
 	}
 
-	CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
+	CreateSeassionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSeassionCompleteDelegate);
 
 	SessionSettings = MakeShareable(new FOnlineSessionSettings());
 
@@ -52,7 +52,7 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings)) {
-		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSeassionCompleteDelegateHandle);
 	}
 }
 
@@ -60,7 +60,7 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
 {
 	if (!SessionInterface.IsValid()) return;
 
-	FindSessionsCompleteDelegateHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegate);
+	FindSeassionCompleteDelegateHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegate);
 
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
 	SessionSearch->MaxSearchResults = 10000;
@@ -77,35 +77,44 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
 
 void UMultiplayerSessionsSubsystem::JoinSession(const FOnlineSessionSearchResult& SessionResult)
 {
-	UE_LOG(LogTemp, Display, TEXT("[Online] Joining Match"));
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(
+			-1,
+			15.f,
+			FColor::Cyan,
+			FString(TEXT("Joining Match"))
+		);
+	}
 
-	JoinSessionCompleteDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegate);
+	JoinSeassionCompleteDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegate);
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SessionResult);
 }
 
 void UMultiplayerSessionsSubsystem::DestroySession()
 {
-	if (!SessionInterface.IsValid()) return;
-
-	DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegate);
 }
 
 void UMultiplayerSessionsSubsystem::StartSession()
 {
-	if (!SessionInterface.IsValid()) return;
-
-	StartSessionCompleteDelegateHandle = SessionInterface->AddOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegate);
 }
 
 void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSucessfull) {
 	if (SessionInterface.IsValid())
 	{
-		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSeassionCompleteDelegateHandle);
 	}
 
 	if (bWasSucessfull) {
-		UE_LOG(LogTemp, Display, TEXT("[Online] Successfully created session with name"));
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Blue,
+				FString::Printf(TEXT("Successfully created session with name: %s"), *SessionName.ToString())
+			);
+		}
 
 		UWorld* World = GetWorld();
 		if (World)
@@ -121,7 +130,16 @@ void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, b
 			else
 			{
 				// Friendly Warning saying it is using default fallback
-				UE_LOG(LogTemp, Warning, TEXT("[Online] MultiplayerSessions: LobbyMap is None in Multiplayer Settings. Falling back to default plugin map."));
+				if (GEngine)
+				{
+					GEngine->AddOnScreenDebugMessage(
+						-1,
+						15.f,
+						FColor::Yellow,
+						TEXT("Warning: No Lobby map selected in Project Settings. Using default plugin fallback.")
+					);
+				}
+				UE_LOG(LogTemp, Warning, TEXT("MultiplayerSessions: LobbyMap is None in Multiplayer Settings. Falling back to default plugin map."));
 
 				LobbyPath = TEXT("/MultiplayerSessions/Maps/Lobby");
 			}
@@ -132,15 +150,20 @@ void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, b
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Online] Failed to create session!"));
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Red,
+				FString(TEXT("Failed to create session!"))
+			);
+		}
 	}
 }
 
 void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSucessfull)
 {
 	if (!SessionInterface.IsValid()) return;
-
-	SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 
 	int i = 0;
 	for (auto& Result : SessionSearch->SearchResults) {
@@ -150,7 +173,15 @@ void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSucessfull)
 		FString MatchType;
 		Result.Session.SessionSettings.Get(FName("MatchType"), MatchType);
 
-		UE_LOG(LogTemp, Display, TEXT("[Online] Found Session"));
+		if (GEngine) {
+			i++;
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Cyan,
+				FString::Printf(TEXT("Found Session: %s | User: %s"), *Id, *User)
+			);
+		}
 
 		if (MatchType == FString("FreeForAll"))
 		{
@@ -161,7 +192,15 @@ void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSucessfull)
 	}
 
 	if (i == 0) {
-		UE_LOG(LogTemp, Warning, TEXT("[Online] No Session Found"));
+		if (GEngine) {
+			i++;
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Red,
+				FString(TEXT("No Found Session :("))
+			);
+		}
 	}
 }
 
@@ -169,17 +208,22 @@ void UMultiplayerSessionsSubsystem::OnJoinSessionComplete(FName SessionName, EOn
 {
 	if (!SessionInterface.IsValid()) return;
 
-	SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
-
 	if (Result != EOnJoinSessionCompleteResult::Success)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Online] Error: A Unreal blocked the connection!"));
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, TEXT("Error: A Unreal blocked the connection!"));
 		return;
 	}
 
 	FString Address;
 	if (SessionInterface->GetResolvedConnectString(NAME_GameSession, Address)) {
-		UE_LOG(LogTemp, Display, TEXT("[Online] Joined Session"));
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Green,
+				FString::Printf(TEXT("Joined Session: %s"), *Address)
+			);
+		}
 
 		APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController();
 		if (PlayerController) {
@@ -190,32 +234,37 @@ void UMultiplayerSessionsSubsystem::OnJoinSessionComplete(FName SessionName, EOn
 
 void UMultiplayerSessionsSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSucessfull)
 {
-	if (!SessionInterface.IsValid()) return;
-
-	SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
-
 	if (bWasSucessfull) {
-		UE_LOG(LogTemp, Display, TEXT("[Online] Successfully destroyed the session"));
+		DestroySeassionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegate);
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Online] Failed to destroy the session!"));
-
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Red,
+				FString(TEXT("Failed to destroy the session!"))
+			);
+		}
 	}
 }
 
 void UMultiplayerSessionsSubsystem::OnStartSessionComplete(FName SessionName, bool bWasSucessfull)
 {
-	if (!SessionInterface.IsValid()) return;
-
-	SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegateHandle);
-
 	if (bWasSucessfull) {
-		UE_LOG(LogTemp, Display, TEXT("[Online] Successfully started the session"));
+		StartSeassionCompleteDelegateHandle = SessionInterface->AddOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegate);
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Online] Failed to start the session!"));
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Red,
+				FString(TEXT("Failed to start the session!"))
+			);
+		}
 	}
 }
 
