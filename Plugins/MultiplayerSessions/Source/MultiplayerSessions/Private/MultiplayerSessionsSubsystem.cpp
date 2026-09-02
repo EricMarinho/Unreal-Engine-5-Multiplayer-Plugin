@@ -16,8 +16,11 @@ UMultiplayerSessionsSubsystem::UMultiplayerSessionsSubsystem():
 {
 #if WITH_EDITOR
 	IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get(FName("NULL"));
+	bIsLanSubsystem = true;
 #else
 	IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
+	bIsLanSubsystem = OnlineSubsystem->GetSubsystemName() == "NULL" ? true : false;
+
 #endif
 	if (OnlineSubsystem) {
 		SessionInterface = OnlineSubsystem->GetSessionInterface();
@@ -33,25 +36,19 @@ void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FS
 		SessionInterface->DestroySession(NAME_GameSession);
 	}
 
-	SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSeassionCompleteDelegate);
+	 CreateSeassionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSeassionCompleteDelegate);
 
-	TSharedPtr<FOnlineSessionSettings> SessionSettings = MakeShareable(new FOnlineSessionSettings());
+	SessionSettings = MakeShareable(new FOnlineSessionSettings());
 
-#if WITH_EDITOR
-	SessionSettings->bIsLANMatch = true;
-	SessionSettings->bUsesPresence = false;
-	SessionSettings->bUseLobbiesIfAvailable = false;
-#else
-	SessionSettings->bIsLANMatch = false;
-	SessionSettings->bUsesPresence = true;
-	SessionSettings->bUseLobbiesIfAvailable = true;
-#endif
-	SessionSettings->NumPublicConnections = 4;
+	SessionSettings->bIsLANMatch = bIsLanSubsystem;
+	SessionSettings->bUsesPresence = !bIsLanSubsystem;
+	SessionSettings->bUseLobbiesIfAvailable = !bIsLanSubsystem;
+	SessionSettings->NumPublicConnections = NumPublicConnections;
 	SessionSettings->bAllowJoinInProgress = true;
 	SessionSettings->bAllowJoinViaPresence = true;
 	SessionSettings->bShouldAdvertise = true;
 
-	SessionSettings->Set(FName("MatchType"), FString("FreeForAll"), EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
+	SessionSettings->Set(FName("MatchType"), MatchType, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings);
@@ -61,20 +58,14 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
 {
 	if (!SessionInterface.IsValid()) return;
 
-	SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegate);
+	FindSeassionCompleteDelegateHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegate);
 
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
 	SessionSearch->MaxSearchResults = 10000;
 
-#if WITH_EDITOR
-	SessionSearch->bIsLanQuery = true;
-	SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, false, EOnlineComparisonOp::Equals);
-	SessionSearch->QuerySettings.Set(FName("PRESENCESEARCH"), false, EOnlineComparisonOp::Equals);
-#else
-	SessionSearch->bIsLanQuery = false;
-	SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, true, EOnlineComparisonOp::Equals);
-	SessionSearch->QuerySettings.Set(FName("PRESENCESEARCH"), true, EOnlineComparisonOp::Equals);
-#endif
+	SessionSearch->bIsLanQuery = bIsLanSubsystem;
+	SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, !bIsLanSubsystem, EOnlineComparisonOp::Equals);
+	SessionSearch->QuerySettings.Set(FName("PRESENCESEARCH"), !bIsLanSubsystem, EOnlineComparisonOp::Equals);
 
 	SessionSearch->QuerySettings.Set(FName("MatchType"), FString("FreeForAll"), EOnlineComparisonOp::Equals);
 
@@ -94,7 +85,7 @@ void UMultiplayerSessionsSubsystem::JoinSession(const FOnlineSessionSearchResult
 		);
 	}
 
-	SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegate);
+	JoinSeassionCompleteDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegate);
 	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
 	SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SessionResult);
 }
@@ -222,9 +213,37 @@ void UMultiplayerSessionsSubsystem::OnJoinSessionComplete(FName SessionName, EOn
 
 void UMultiplayerSessionsSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSucessfull)
 {
+	if (bWasSucessfull) {
+		DestroySeassionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegate);
+	}
+	else
+	{
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Red,
+				FString(TEXT("Failed to destroy the session!"))
+			);
+		}
+	}
 }
 
 void UMultiplayerSessionsSubsystem::OnStartSessionComplete(FName SessionName, bool bWasSucessfull)
 {
+	if (bWasSucessfull) {
+		StartSeassionCompleteDelegateHandle = SessionInterface->AddOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegate);
+	}
+	else
+	{
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				15.f,
+				FColor::Red,
+				FString(TEXT("Failed to start the session!"))
+			);
+		}
+	}
 }
 

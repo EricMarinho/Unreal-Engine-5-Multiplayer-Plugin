@@ -5,8 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
-#include "Interfaces/OnlineSessionInterface.h"
-
 #include "FinalFantasyCharacter.generated.h"
 
 class USpringArmComponent;
@@ -94,28 +92,5 @@ public:
 
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
-
-public:
-	IOnlineSessionPtr OnlineSessionInterface;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Multiplayer")
-	TSoftObjectPtr<UWorld> LobbyMap;
-
-protected:
-	UFUNCTION(BlueprintCallable, Category="Online")
-	void CreateGameSession();
-
-	UFUNCTION(BlueprintCallable, Category = "Online")
-	void JoinGameSession();
-
-	void OnCreateSessionComplete(FName SessionName, bool bWasSucessfull);
-	void OnFindSessionsComplete(bool bWasSucessfull);
-	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
-
-private:
-	FOnCreateSessionCompleteDelegate CreateSeassionCompleteDelegate;
-	FOnFindSessionsCompleteDelegate FindSessionsCompleteDelegate;
-	FOnJoinSessionCompleteDelegate JoinSessionCompleteDelegate;
-	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 };
 

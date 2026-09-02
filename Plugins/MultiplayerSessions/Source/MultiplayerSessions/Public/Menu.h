@@ -18,7 +18,6 @@ public:
 
 protected:
 	virtual void NativeOnInitialized() override;
-
 	virtual void NativeConstruct() override;
 
 private:

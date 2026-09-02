@@ -34,6 +34,10 @@ protected:
 
 private:
 	IOnlineSessionPtr SessionInterface;
+	TSharedPtr<FOnlineSessionSettings> SessionSettings;
+	TSharedPtr<FOnlineSessionSearch> SessionSearch;
+
+	bool bIsLanSubsystem = false;
 
 	FOnCreateSessionCompleteDelegate CreateSeassionCompleteDelegate;
 	FDelegateHandle CreateSeassionCompleteDelegateHandle;
@@ -45,6 +49,4 @@ private:
 	FDelegateHandle DestroySeassionCompleteDelegateHandle;
 	FOnStartSessionCompleteDelegate StartSessionCompleteDelegate;
 	FDelegateHandle StartSeassionCompleteDelegateHandle;
-
-	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 };
