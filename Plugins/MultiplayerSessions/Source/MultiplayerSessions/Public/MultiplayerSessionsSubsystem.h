@@ -25,9 +25,6 @@ public:
 	void DestroySession();
 	void StartSession();
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Multiplayer")
-	TSoftObjectPtr<UWorld> LobbyMap;
-
 protected:
 	void OnCreateSessionComplete(FName SessionName, bool bWasSucessfull);
 	void OnFindSessionsComplete(bool bWasSucessfull);

@@ -128,6 +128,8 @@ void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, b
 				FString LobbyPath = Settings->LobbyMap.ToSoftObjectPath().GetLongPackageName();
 				FString TravelPath = FString::Printf(TEXT("%s?listen"), *LobbyPath);
 
+				UE_LOG(LogTemp, Warning, TEXT("Tentando viajar para o mapa: %s"), *TravelPath);
+
 				World->ServerTravel(TravelPath);
 			}
 			else
