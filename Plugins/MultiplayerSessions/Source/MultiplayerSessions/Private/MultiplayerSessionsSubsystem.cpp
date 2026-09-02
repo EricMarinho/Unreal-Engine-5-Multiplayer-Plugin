@@ -102,6 +102,11 @@ void UMultiplayerSessionsSubsystem::StartSession()
 
 void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSucessfull)
 {
+	if (SessionInterface.IsValid())
+	{
+		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSeassionCompleteDelegateHandle);
+	}
+
 	if (bWasSucessfull) {
 		if (GEngine) {
 			GEngine->AddOnScreenDebugMessage(
@@ -111,8 +116,6 @@ void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, b
 				FString::Printf(TEXT("Successfully created session with name: %s"), *SessionName.ToString())
 			);
 		}
-
-		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSeassionCompleteDelegateHandle);
 
 		UWorld* World = GetWorld();
 		if (World)

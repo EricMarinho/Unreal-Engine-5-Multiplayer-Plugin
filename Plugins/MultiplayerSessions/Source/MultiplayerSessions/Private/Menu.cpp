@@ -43,6 +43,13 @@ void UMenu::NativeOnInitialized()
 	}
 }
 
+void UMenu::NativeDestruct()
+{
+	MenuTearDown();
+
+	Super::NativeDestruct();
+}
+
 void UMenu::HostButtonClicked()
 {
 	if (GEngine)
@@ -72,5 +79,19 @@ void UMenu::JoinButtonClicked()
 	}
 	if (MultiplayerSubsessionSystem) {
 		MultiplayerSubsessionSystem->FindSessions(10000);
+	}
+}
+
+void UMenu::MenuTearDown()
+{
+	RemoveFromParent();
+	UWorld* World = GetWorld();
+	if (World) {
+		APlayerController* PlayerController = World->GetFirstPlayerController();
+		if (PlayerController) {
+			FInputModeUIOnly InputModeData;
+			PlayerController->SetInputMode(InputModeData);
+			PlayerController->SetShowMouseCursor(false);
+		}
 	}
 }
