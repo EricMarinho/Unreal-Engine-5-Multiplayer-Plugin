@@ -13,7 +13,7 @@ UCLASS()
 class MULTIPLAYERSESSIONS_API UMenu : public UUserWidget
 {
 	GENERATED_BODY()
-
+	
 public:
 
 protected:
@@ -36,10 +36,7 @@ private:
 
 	void MenuTearDown();
 
-	void MenuSetup(int32 NumberOfPulbicConnections = 4, FString TypeOfMatch = TEXT("FreeForAll"));
-
 	class UMultiplayerSessionsSubsystem* MultiplayerSubsessionSystem;
 
-	int32 NumPublic{4};
-	FString MatchType{TEXT("FreeForAll")};
+	int32 NumPublic;
 };

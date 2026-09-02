@@ -8,7 +8,25 @@ void UMenu::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	MenuSetup();
+	SetVisibility(ESlateVisibility::Visible);
+	SetIsFocusable(true);
+
+	UWorld* World = GetWorld();
+	if (World) {
+		APlayerController* PlayerController = World->GetFirstPlayerController();
+		if (PlayerController) {
+			FInputModeUIOnly InputModeData;
+			InputModeData.SetWidgetToFocus(TakeWidget());
+			InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			PlayerController->SetInputMode(InputModeData);
+			PlayerController->SetShowMouseCursor(true);
+		}
+	}
+
+	UGameInstance* GameInstance = GetGameInstance();
+	if (GameInstance) {
+		MultiplayerSubsessionSystem = GameInstance->GetSubsystem<UMultiplayerSessionsSubsystem>();
+	}
 }
 
 void UMenu::NativeOnInitialized()
@@ -32,33 +50,6 @@ void UMenu::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-
-void UMenu::MenuSetup(int32 NumberOfPulbicConnections, FString TypeOfMatch)
-{
-	SetVisibility(ESlateVisibility::Visible);
-	SetIsFocusable(true);
-
-	NumPublic = NumberOfPulbicConnections;
-	MatchType = TypeOfMatch;
-
-	UWorld* World = GetWorld();
-	if (World) {
-		APlayerController* PlayerController = World->GetFirstPlayerController();
-		if (PlayerController) {
-			FInputModeUIOnly InputModeData;
-			InputModeData.SetWidgetToFocus(TakeWidget());
-			InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-			PlayerController->SetInputMode(InputModeData);
-			PlayerController->SetShowMouseCursor(true);
-		}
-	}
-
-	UGameInstance* GameInstance = GetGameInstance();
-	if (GameInstance) {
-		MultiplayerSubsessionSystem = GameInstance->GetSubsystem<UMultiplayerSessionsSubsystem>();
-	}
-}
-
 void UMenu::HostButtonClicked()
 {
 	if (GEngine)
@@ -71,7 +62,7 @@ void UMenu::HostButtonClicked()
 		);
 	}
 	if (MultiplayerSubsessionSystem) {
-		MultiplayerSubsessionSystem->CreateSession(NumPublic, MatchType);
+		MultiplayerSubsessionSystem->CreateSession(4,FString("FreeForAll"));
 	}
 }
 

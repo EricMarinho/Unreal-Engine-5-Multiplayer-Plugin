@@ -100,8 +100,7 @@ void UMultiplayerSessionsSubsystem::StartSession()
 {
 }
 
-void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSucessfull)
-{
+void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSucessfull) {
 	if (bWasSucessfull) {
 		if (GEngine) {
 			GEngine->AddOnScreenDebugMessage(
@@ -116,17 +115,32 @@ void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, b
 		if (World)
 		{
 			const UMultiplayerSettings* Settings = GetDefault<UMultiplayerSettings>();
+			FString LobbyPath;
+
+			// Verifica se o usuário configurou um mapa nas Project Settings
 			if (Settings && !Settings->LobbyMap.IsNull())
 			{
-				FString LobbyPath = Settings->LobbyMap.ToSoftObjectPath().GetLongPackageName();
-				FString TravelPath = FString::Printf(TEXT("%s?listen"), *LobbyPath);
-
-				World->ServerTravel(TravelPath);
+				LobbyPath = Settings->LobbyMap.ToSoftObjectPath().GetLongPackageName();
 			}
 			else
 			{
-				UE_LOG(LogTemp, Error, TEXT("Erro: Mapa do Lobby nao referenciado nas Multiplayer Settings!"));
+				// Warning amigável avisando que vai usar o fallback padrão
+				if (GEngine)
+				{
+					GEngine->AddOnScreenDebugMessage(
+						-1,
+						15.f,
+						FColor::Yellow,
+						TEXT("Warning: No Lobby map selected in Project Settings. Using default plugin fallback.")
+					);
+				}
+				UE_LOG(LogTemp, Warning, TEXT("MultiplayerSessions: LobbyMap is None in Multiplayer Settings. Falling back to default plugin map."));
+
+				LobbyPath = TEXT("/MultiplayerSessions/Maps/Lobby");
 			}
+
+			FString TravelPath = FString::Printf(TEXT("%s?listen"), *LobbyPath);
+			World->ServerTravel(TravelPath);
 		}
 	}
 	else
