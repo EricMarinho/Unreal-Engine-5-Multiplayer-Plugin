@@ -122,14 +122,14 @@ void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, b
 			const UMultiplayerSettings* Settings = GetDefault<UMultiplayerSettings>();
 			FString LobbyPath;
 
-			// Verifica se o usuário configurou um mapa nas Project Settings
+			// Check if user configured lobby map on project settings
 			if (Settings && !Settings->LobbyMap.IsNull())
 			{
 				LobbyPath = Settings->LobbyMap.ToSoftObjectPath().GetLongPackageName();
 			}
 			else
 			{
-				// Warning amigável avisando que vai usar o fallback padrão
+				// Friendly Warning saying it is using default fallback
 				if (GEngine)
 				{
 					GEngine->AddOnScreenDebugMessage(
