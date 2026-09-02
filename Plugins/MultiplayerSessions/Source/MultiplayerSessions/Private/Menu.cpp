@@ -98,7 +98,7 @@ void UMenu::MenuTearDown()
 	if (World) {
 		APlayerController* PlayerController = World->GetFirstPlayerController();
 		if (PlayerController) {
-			FInputModeUIOnly InputModeData;
+			FInputModeGameOnly InputModeData;
 			PlayerController->SetInputMode(InputModeData);
 			PlayerController->SetShowMouseCursor(false);
 		}
