@@ -142,29 +142,34 @@ void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSucessfull)
 
 	SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 
-	if (!bWasSucessfull) return;
+	if (bWasSucessfull) {
+		int i = 0;
+		for (auto& Result : SessionSearch->SearchResults) {
+			FString Id = Result.GetSessionIdStr();
+			FString User = Result.Session.OwningUserName;
 
-	int i = 0;
-	for (auto& Result : SessionSearch->SearchResults) {
-		FString Id = Result.GetSessionIdStr();
-		FString User = Result.Session.OwningUserName;
+			FString MatchType;
+			Result.Session.SessionSettings.Get(FName("MatchType"), MatchType);
 
-		FString MatchType;
-		Result.Session.SessionSettings.Get(FName("MatchType"), MatchType);
+			UE_LOG(LogTemp, Display, TEXT("[Online] Found Session"));
 
-		UE_LOG(LogTemp, Display, TEXT("[Online] Found Session"));
+			if (MatchType == FString("FreeForAll"))
+			{
+				ThisClass::JoinSession(Result);
 
-		if (MatchType == FString("FreeForAll"))
-		{
-			ThisClass::JoinSession(Result);
+				break;
+			}
+		}
 
-			break;
+		if (i == 0) {
+			UE_LOG(LogTemp, Warning, TEXT("[Online] No Session Found"));
 		}
 	}
-
-	if (i == 0) {
-		UE_LOG(LogTemp, Warning, TEXT("[Online] No Session Found"));
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Online] Failed to find session!"));
 	}
+
 }
 
 void UMultiplayerSessionsSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
