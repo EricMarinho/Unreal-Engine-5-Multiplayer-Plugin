@@ -142,6 +142,8 @@ void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSucessfull)
 
 	SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
 
+	if (!bWasSucessfull) return;
+
 	int i = 0;
 	for (auto& Result : SessionSearch->SearchResults) {
 		FString Id = Result.GetSessionIdStr();
