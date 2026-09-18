@@ -1,228 +1,228 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "MultiplayerSessionsSubsystem.h"
 #include "MultiplayerSettings.h"
-#include "OnlineSubsystem.h"
-#include "OnlineSessionSettings.h"
-#include "Online/OnlineSessionNames.h"
+#include "Online/OnlineServices.h"
+#include "Online/Lobbies.h"
+#include "Online/Auth.h"
+#include "Online/CoreOnline.h"
+#include "Online/OnlineServicesRegistry.h"
+#include "Online/OnlineAsyncOpHandle.h"
+#include "Kismet/GameplayStatics.h"
 
-UMultiplayerSessionsSubsystem::UMultiplayerSessionsSubsystem():
-	CreateSessionCompleteDelegate(FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete)),
-	FindSessionsCompleteDelegate(FOnFindSessionsCompleteDelegate::CreateUObject(this, &ThisClass::OnFindSessionsComplete)),
-	JoinSessionCompleteDelegate(FOnJoinSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnJoinSessionComplete)),
-	DestroySessionCompleteDelegate(FOnDestroySessionCompleteDelegate::CreateUObject(this,&ThisClass::OnDestroySessionComplete)),
-	StartSessionCompleteDelegate(FOnStartSessionCompleteDelegate::CreateUObject(this,&ThisClass::OnStartSessionComplete))
+using namespace UE::Online;
+
+void UMultiplayerSessionsSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-#if WITH_EDITOR
-	IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get(FName("NULL"));
-	bIsLanSubsystem = true;
-#else
-	IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
-	bIsLanSubsystem = OnlineSubsystem->GetSubsystemName() == "NULL" ? true : false;
-
-#endif
-	if (OnlineSubsystem) {
-		SessionInterface = OnlineSubsystem->GetSessionInterface();
-	}
+	Super::Initialize(Collection);
+	UE_LOG(LogTemp, Log, TEXT("[OSSv2] Initializing Multiplayer Lobbies Subsystem..."));
 }
 
-void UMultiplayerSessionsSubsystem::CreateSession(int32 NumPublicConnections, FString MatchType)
+TSharedPtr<ILobbies> UMultiplayerSessionsSubsystem::GetLobbiesInterface() const
 {
-	if (!SessionInterface.IsValid()) return;
-
-	auto ExistingSession = SessionInterface->GetNamedSession(NAME_GameSession);
-	if (ExistingSession != nullptr) {
-		SessionInterface->DestroySession(NAME_GameSession);
-	}
-
-	CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegate);
-
-	SessionSettings = MakeShareable(new FOnlineSessionSettings());
-
-	SessionSettings->bIsLANMatch = bIsLanSubsystem;
-	SessionSettings->bUsesPresence = !bIsLanSubsystem;
-	SessionSettings->bUseLobbiesIfAvailable = !bIsLanSubsystem;
-	SessionSettings->NumPublicConnections = NumPublicConnections;
-	SessionSettings->bAllowJoinInProgress = true;
-	SessionSettings->bAllowJoinViaPresence = true;
-	SessionSettings->bShouldAdvertise = true;
-
-	SessionSettings->Set(FName("MatchType"), MatchType, EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
-
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	if (!SessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings)) {
-		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
-	}
-}
-
-void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
-{
-	if (!SessionInterface.IsValid()) return;
-
-	FindSessionsCompleteDelegateHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegate);
-
-	SessionSearch = MakeShareable(new FOnlineSessionSearch());
-	SessionSearch->MaxSearchResults = 10000;
-
-	SessionSearch->bIsLanQuery = bIsLanSubsystem;
-	SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, !bIsLanSubsystem, EOnlineComparisonOp::Equals);
-	SessionSearch->QuerySettings.Set(FName("PRESENCESEARCH"), !bIsLanSubsystem, EOnlineComparisonOp::Equals);
-
-	SessionSearch->QuerySettings.Set(FName("MatchType"), FString("FreeForAll"), EOnlineComparisonOp::Equals);
-
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	SessionInterface->FindSessions(*LocalPlayer->GetPreferredUniqueNetId(), SessionSearch.ToSharedRef());
-}
-
-void UMultiplayerSessionsSubsystem::JoinSession(const FOnlineSessionSearchResult& SessionResult)
-{
-	UE_LOG(LogTemp, Display, TEXT("[Online] Joining Match"));
-
-	JoinSessionCompleteDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegate);
-	const ULocalPlayer* LocalPlayer = GetWorld()->GetFirstLocalPlayerFromController();
-	SessionInterface->JoinSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, SessionResult);
-}
-
-void UMultiplayerSessionsSubsystem::DestroySession()
-{
-	if (!SessionInterface.IsValid()) return;
-
-	DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegate);
-}
-
-void UMultiplayerSessionsSubsystem::StartSession()
-{
-	if (!SessionInterface.IsValid()) return;
-
-	StartSessionCompleteDelegateHandle = SessionInterface->AddOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegate);
-}
-
-void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSucessfull) {
-	if (SessionInterface.IsValid())
+	IOnlineServicesPtr OnlineServices = GetServices(EOnlineServices::Null);
+	if (OnlineServices.IsValid())
 	{
-		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
+		return OnlineServices->GetInterface<ILobbies>();
 	}
+	return nullptr;
+}
 
-	if (bWasSucessfull) {
-		UE_LOG(LogTemp, Display, TEXT("[Online] Successfully created session with name"));
-
-		UWorld* World = GetWorld();
-		if (World)
+FAccountId UMultiplayerSessionsSubsystem::GetLocalAccountId() const
+{
+	IOnlineServicesPtr OnlineServices = GetServices(EOnlineServices::Null);
+	if (OnlineServices.IsValid())
+	{
+		IAuthPtr AuthInterface = OnlineServices->GetInterface<IAuth>();
+		if (AuthInterface.IsValid())
 		{
-			const UMultiplayerSettings* Settings = GetDefault<UMultiplayerSettings>();
-			FString LobbyPath;
-
-			// Check if user configured lobby map on project settings
-			if (Settings && !Settings->LobbyMap.IsNull())
+			FAuthGetLocalOnlineUserByPlatformUserId::Params GetUserParams;
+			GetUserParams.PlatformUserId = FPlatformMisc::GetPlatformUserForUserIndex(0);
+			TOnlineResult<FAuthGetLocalOnlineUserByPlatformUserId> AuthResult = AuthInterface->GetLocalOnlineUserByPlatformUserId(MoveTemp(GetUserParams));
+			if (AuthResult.IsOk())
 			{
-				LobbyPath = Settings->LobbyMap.ToSoftObjectPath().GetLongPackageName();
+				return AuthResult.GetOkValue().AccountInfo->AccountId;
 			}
-			else
-			{
-				// Friendly Warning saying it is using default fallback
-				UE_LOG(LogTemp, Warning, TEXT("[Online] MultiplayerSessions: LobbyMap is None in Multiplayer Settings. Falling back to default plugin map."));
-
-				LobbyPath = TEXT("/MultiplayerSessions/Maps/Lobby");
-			}
-
-			FString TravelPath = FString::Printf(TEXT("%s?listen"), *LobbyPath);
-			World->ServerTravel(TravelPath);
 		}
 	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[Online] Failed to create session!"));
-	}
+	return FAccountId();
 }
 
-void UMultiplayerSessionsSubsystem::OnFindSessionsComplete(bool bWasSucessfull)
+bool UMultiplayerSessionsSubsystem::IsLanMatch() const
 {
-	if (!SessionInterface.IsValid()) return;
-
-	SessionInterface->ClearOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegateHandle);
-
-	if (bWasSucessfull) {
-		int i = 0;
-		for (auto& Result : SessionSearch->SearchResults) {
-			FString Id = Result.GetSessionIdStr();
-			FString User = Result.Session.OwningUserName;
-
-			FString MatchType;
-			Result.Session.SessionSettings.Get(FName("MatchType"), MatchType);
-
-			UE_LOG(LogTemp, Display, TEXT("[Online] Found Session"));
-
-			if (MatchType == FString("FreeForAll"))
-			{
-				ThisClass::JoinSession(Result);
-
-				break;
-			}
-		}
-
-		if (i == 0) {
-			UE_LOG(LogTemp, Warning, TEXT("[Online] No Session Found"));
-		}
-	}
-	else
+	IOnlineServicesPtr OnlineServices = GetServices(EOnlineServices::Null);
+	if (OnlineServices.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Online] Failed to find session!"));
+		return OnlineServices->GetServicesProvider() == EOnlineServices::Null;
 	}
-
+	return false;
 }
 
-void UMultiplayerSessionsSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result)
+// ==========================================
+// 1. CREATE LOBBY
+// ==========================================
+void UMultiplayerSessionsSubsystem::CreateSession(int32 MaxPlayers, FString MatchType)
 {
-	if (!SessionInterface.IsValid()) return;
-
-	SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
-
-	if (Result != EOnJoinSessionCompleteResult::Success)
+	FAccountId LocalAccountId = GetLocalAccountId();
+	if (!LocalAccountId.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Online] Error: A Unreal blocked the connection!"));
+		UE_LOG(LogTemp, Warning, TEXT("[OSSv2] Invalid Local Account ID!"));
 		return;
 	}
 
-	FString Address;
-	if (SessionInterface->GetResolvedConnectString(NAME_GameSession, Address)) {
-		UE_LOG(LogTemp, Display, TEXT("[Online] Joined Session"));
-
-		APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController();
-		if (PlayerController) {
-			PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
-		}
-	}
-}
-
-void UMultiplayerSessionsSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSucessfull)
-{
-	if (!SessionInterface.IsValid()) return;
-
-	SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
-
-	if (bWasSucessfull) {
-		UE_LOG(LogTemp, Display, TEXT("[Online] Successfully destroyed the session"));
-	}
-	else
+	TSharedPtr<ILobbies> Lobbies = GetLobbiesInterface();
+	if (!Lobbies.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Online] Failed to destroy the session!"));
-
+		UE_LOG(LogTemp, Warning, TEXT("[OSSv2] Invalid Lobbies Interface!"));
+		return;
 	}
+
+	FCreateLobby::Params Params;
+	Params.LocalAccountId = LocalAccountId;
+	Params.LocalName = FName("GameSession");
+	Params.SchemaId = FName("GameLobby"); // Vinculado ao DefaultEngine.ini
+	Params.MaxMembers = MaxPlayers;
+	Params.UserAttributes.Add(TEXT("MatchType"), MatchType);
+
+	UE_LOG(LogTemp, Display, TEXT("[OSSv2] Creating Lobby with Schema 'GameLobby'..."));
+
+	Lobbies->CreateLobby(MoveTemp(Params)).OnComplete(
+		[this](const TOnlineResult<FCreateLobby>& Result)
+		{
+			if (Result.IsOk())
+			{
+				UE_LOG(LogTemp, Display, TEXT("[OSSv2] Lobby created successfully!"));
+
+				// Correção: Acesso via ponteiro inteligente ->
+				CurrentLobbyId = Result.GetOkValue().Lobby->LobbyId;
+
+				UWorld* World = GetWorld();
+				if (World)
+				{
+					const UMultiplayerSettings* Settings = GetDefault<UMultiplayerSettings>();
+					FString LobbyPath;
+
+					if (Settings && !Settings->LobbyMap.IsNull())
+					{
+						LobbyPath = Settings->LobbyMap.ToSoftObjectPath().GetLongPackageName();
+					}
+					else
+					{
+						UE_LOG(LogTemp, Warning, TEXT("[OSSv2] LobbyMap not configured. Using default fallback."));
+						LobbyPath = TEXT("/MultiplayerSessions/Maps/Lobby");
+					}
+
+					FString TravelPath = FString::Printf(TEXT("%s?listen"), *LobbyPath);
+					World->ServerTravel(TravelPath);
+				}
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[OSSv2] Failed to create lobby. Error: %s"),
+					*Result.GetErrorValue().GetErrorId());
+			}
+		});
 }
 
-void UMultiplayerSessionsSubsystem::OnStartSessionComplete(FName SessionName, bool bWasSucessfull)
+// ==========================================
+// 2. FIND LOBBIES
+// ==========================================
+void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
 {
-	if (!SessionInterface.IsValid()) return;
+	FAccountId LocalAccountId = GetLocalAccountId();
+	if (!LocalAccountId.IsValid()) return;
 
-	SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegateHandle);
+	TSharedPtr<ILobbies> Lobbies = GetLobbiesInterface();
+	if (!Lobbies.IsValid()) return;
 
-	if (bWasSucessfull) {
-		UE_LOG(LogTemp, Display, TEXT("[Online] Successfully started the session"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[Online] Failed to start the session!"));
-	}
+	FFindLobbies::Params Params;
+	Params.LocalAccountId = LocalAccountId;
+
+	UE_LOG(LogTemp, Display, TEXT("[OSSv2] Searching Lobbies..."));
+
+	Lobbies->FindLobbies(MoveTemp(Params)).OnComplete(
+		[this](const TOnlineResult<FFindLobbies>& Result)
+		{
+			if (Result.IsOk())
+			{
+				UE_LOG(LogTemp, Display, TEXT("[OSSv2] Search finished successfully. Found %d lobbies."), Result.GetOkValue().Lobbies.Num());
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[OSSv2] Failed to search lobbies. Error: %s"),
+					*Result.GetErrorValue().GetErrorId());
+			}
+		});
 }
 
+// ==========================================
+// 3. JOIN LOBBY
+// ==========================================
+void UMultiplayerSessionsSubsystem::JoinSession(FLobbyId LobbyId)
+{
+	FAccountId LocalAccountId = GetLocalAccountId();
+	if (!LocalAccountId.IsValid()) return;
+
+	TSharedPtr<ILobbies> Lobbies = GetLobbiesInterface();
+	if (!Lobbies.IsValid()) return;
+
+	FJoinLobby::Params Params;
+	Params.LocalAccountId = LocalAccountId;
+	Params.LocalName = FName("GameSession");
+	Params.LobbyId = LobbyId;
+
+	UE_LOG(LogTemp, Display, TEXT("[OSSv2] Entering lobby..."));
+
+	Lobbies->JoinLobby(MoveTemp(Params)).OnComplete(
+		[this, LobbyId](const TOnlineResult<FJoinLobby>& Result)
+		{
+			if (Result.IsOk())
+			{
+				UE_LOG(LogTemp, Display, TEXT("[OSSv2] Entered lobby successfully!"));
+				CurrentLobbyId = LobbyId;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[OSSv2] Error joining lobby. Error: %s"),
+					*Result.GetErrorValue().GetErrorId());
+			}
+		});
+}
+
+// ==========================================
+// 4. START GAME
+// ==========================================
+void UMultiplayerSessionsSubsystem::StartGame()
+{
+	UE_LOG(LogTemp, Display, TEXT("[OSSv2] StartGame not implemented for Lobbies yet."));
+}
+
+// ==========================================
+// 5. LEAVE LOBBY
+// ==========================================
+void UMultiplayerSessionsSubsystem::LeaveSession()
+{
+	FAccountId LocalAccountId = GetLocalAccountId();
+	if (!LocalAccountId.IsValid()) return;
+
+	TSharedPtr<ILobbies> Lobbies = GetLobbiesInterface();
+	if (!Lobbies.IsValid()) return;
+
+	FLeaveLobby::Params Params;
+	Params.LocalAccountId = LocalAccountId;
+	Params.LobbyId = CurrentLobbyId;
+
+	UE_LOG(LogTemp, Display, TEXT("[OSSv2] Leaving Lobby..."));
+
+	Lobbies->LeaveLobby(MoveTemp(Params)).OnComplete(
+		[](const TOnlineResult<FLeaveLobby>& Result)
+		{
+			if (Result.IsOk())
+			{
+				UE_LOG(LogTemp, Display, TEXT("[OSSv2] Left lobby successfully!"));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[OSSv2] Failed to leave lobby. Error: %s"),
+					*Result.GetErrorValue().GetErrorId());
+			}
+		});
+}

@@ -1,52 +1,30 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "Interfaces/OnlineSessionInterface.h"
-
+#include "Online/CoreOnline.h"
+#include "Online/Lobbies.h"
 #include "MultiplayerSessionsSubsystem.generated.h"
 
-/**
- * 
- */
 UCLASS()
-class UMultiplayerSessionsSubsystem : public UGameInstanceSubsystem
+class MULTIPLAYERSESSIONS_API UMultiplayerSessionsSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
-	
+
 public:
-	UMultiplayerSessionsSubsystem();
+	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 
-	void CreateSession(int32 NumPublicConnections, FString MatchType);
+	void CreateSession(int32 MaxPlayers, FString MatchType);
 	void FindSessions(int32 MaxSearchResults);
-	void JoinSession(const FOnlineSessionSearchResult& SessionResult);
-	void DestroySession();
-	void StartSession();
+	void JoinSession(UE::Online::FLobbyId LobbyId);
+	void StartGame();
+	void LeaveSession();
 
-protected:
-	void OnCreateSessionComplete(FName SessionName, bool bWasSucessfull);
-	void OnFindSessionsComplete(bool bWasSucessfull);
-	void OnJoinSessionComplete(FName SessionName, EOnJoinSessionCompleteResult::Type Result);
-	void OnDestroySessionComplete(FName SessionName, bool bWasSucessfull);
-	void OnStartSessionComplete(FName SessionName, bool bWasSucessfull);
+	bool IsLanMatch() const;
 
 private:
-	IOnlineSessionPtr SessionInterface;
-	TSharedPtr<FOnlineSessionSettings> SessionSettings;
-	TSharedPtr<FOnlineSessionSearch> SessionSearch;
+	TSharedPtr<UE::Online::ILobbies> GetLobbiesInterface() const;
+	UE::Online::FAccountId GetLocalAccountId() const;
 
-	bool bIsLanSubsystem = false;
-
-	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
-	FDelegateHandle CreateSessionCompleteDelegateHandle;
-	FOnFindSessionsCompleteDelegate FindSessionsCompleteDelegate;
-	FDelegateHandle FindSessionsCompleteDelegateHandle;
-	FOnJoinSessionCompleteDelegate JoinSessionCompleteDelegate;
-	FDelegateHandle JoinSessionCompleteDelegateHandle;
-	FOnDestroySessionCompleteDelegate DestroySessionCompleteDelegate;
-	FDelegateHandle DestroySessionCompleteDelegateHandle;
-	FOnStartSessionCompleteDelegate StartSessionCompleteDelegate;
-	FDelegateHandle StartSessionCompleteDelegateHandle;
+	UE::Online::FLobbyId CurrentLobbyId;
 };
