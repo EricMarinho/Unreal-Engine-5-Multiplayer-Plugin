@@ -63,7 +63,7 @@ void UMultiplayerSessionsSubsystem::FindSessions(int32 MaxSearchResults)
 	FindSessionsCompleteDelegateHandle = SessionInterface->AddOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegate);
 
 	SessionSearch = MakeShareable(new FOnlineSessionSearch());
-	SessionSearch->MaxSearchResults = 10000;
+	SessionSearch->MaxSearchResults = 50;
 
 	SessionSearch->bIsLanQuery = bIsLanSubsystem;
 	SessionSearch->QuerySettings.Set(SEARCH_LOBBIES, !bIsLanSubsystem, EOnlineComparisonOp::Equals);
