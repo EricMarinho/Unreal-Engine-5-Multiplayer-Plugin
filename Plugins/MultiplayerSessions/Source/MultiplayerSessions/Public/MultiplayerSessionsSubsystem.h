@@ -1,21 +1,23 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
-
 #include "MultiplayerSessionsSubsystem.generated.h"
 
-/**
- * 
- */
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnCreateSessionComplete, bool, bWasSuccessful);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnDestroySessionComplete, bool, bWasSuccessful);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMultiplayerOnStartSessionComplete, bool, bWasSuccessful);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FMultiplayerOnFindSessionsComplete, const TArray<FOnlineSessionSearchResult>&, bool);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FMultiplayerOnJoinSessionComplete, EOnJoinSessionCompleteResult::Type, const FString&);
+
+
 UCLASS()
 class MULTIPLAYERSESSIONS_API UMultiplayerSessionsSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
-	
 public:
 	UMultiplayerSessionsSubsystem();
 
@@ -24,6 +26,19 @@ public:
 	void JoinSession(const FOnlineSessionSearchResult& SessionResult);
 	void DestroySession();
 	void StartSession();
+
+	UPROPERTY(BlueprintAssignable)
+	FMultiplayerOnCreateSessionComplete MultiplayerOnCreateSessionComplete;
+
+	FMultiplayerOnFindSessionsComplete MultiplayerOnFindSessionsComplete;
+
+	FMultiplayerOnJoinSessionComplete MultiplayerOnJoinSessionComplete;
+
+	UPROPERTY(BlueprintAssignable)
+	FMultiplayerOnDestroySessionComplete MultiplayerOnDestroySessionComplete;
+
+	UPROPERTY(BlueprintAssignable)
+	FMultiplayerOnStartSessionComplete MultiplayerOnStartSessionComplete;
 
 protected:
 	void OnCreateSessionComplete(FName SessionName, bool bWasSucessfull);

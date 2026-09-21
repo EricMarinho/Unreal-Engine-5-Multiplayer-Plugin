@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Interfaces/OnlineSessionInterface.h"
 #include "Menu.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class MULTIPLAYERSESSIONS_API UMenu : public UUserWidget
@@ -15,11 +16,17 @@ class MULTIPLAYERSESSIONS_API UMenu : public UUserWidget
 	GENERATED_BODY()
 
 public:
-
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+
+	UFUNCTION()
+	void OnCreateSession(bool bWasSuccessful);
+
+	void OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResults, bool bWasSuccessful);
+
+	void OnJoinSession(EOnJoinSessionCompleteResult::Type Result, const FString& Address);
 
 private:
 	UPROPERTY(meta = (BindWidget))
@@ -40,6 +47,6 @@ private:
 
 	class UMultiplayerSessionsSubsystem* MultiplayerSubsessionSystem;
 
-	int32 NumPublic{4};
-	FString MatchType{TEXT("FreeForAll")};
+	int32 NumPublic{ 4 };
+	FString MatchType{ TEXT("FreeForAll") };
 };
