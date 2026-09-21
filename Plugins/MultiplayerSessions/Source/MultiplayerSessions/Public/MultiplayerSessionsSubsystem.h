@@ -38,6 +38,9 @@ private:
 	TSharedPtr<FOnlineSessionSearch> SessionSearch;
 
 	bool bIsLanSubsystem = false;
+	bool bCreateSessionOnDestroy = false;
+	int32 iTempNumPublicConnections;
+	FString sTempMatchType;
 
 	FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
 	FDelegateHandle CreateSessionCompleteDelegateHandle;
@@ -49,6 +52,4 @@ private:
 	FDelegateHandle DestroySessionCompleteDelegateHandle;
 	FOnStartSessionCompleteDelegate StartSessionCompleteDelegate;
 	FDelegateHandle StartSessionCompleteDelegateHandle;
-
-	FName CurrentSessionName;
 };
