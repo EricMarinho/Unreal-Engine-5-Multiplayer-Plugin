@@ -21,7 +21,8 @@ public class FinalFantasy : ModuleRules
 			"Slate",
             "OnlineSubsystemSteam",
             "OnlineSubsystem",
-            "OnlineSubsystemUtils"
+            "OnlineSubsystemUtils",
+            "MultiplayerSessions"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

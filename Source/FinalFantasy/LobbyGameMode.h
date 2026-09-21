@@ -15,7 +15,10 @@ class FINALFANTASY_API ALobbyGameMode : public AGameModeBase
 	GENERATED_BODY()
 
 public:
+	virtual void PreInitializeComponents() override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void Logout(AController* Exiting) override;
-	
+
+private:
+	class UMultiplayerSessionsSubsystem* MultiplayerSubsessionSystem;
 };

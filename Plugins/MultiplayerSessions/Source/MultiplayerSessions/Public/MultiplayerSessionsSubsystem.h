@@ -12,7 +12,7 @@
  * 
  */
 UCLASS()
-class UMultiplayerSessionsSubsystem : public UGameInstanceSubsystem
+class MULTIPLAYERSESSIONS_API UMultiplayerSessionsSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 	
@@ -49,4 +49,6 @@ private:
 	FDelegateHandle DestroySessionCompleteDelegateHandle;
 	FOnStartSessionCompleteDelegate StartSessionCompleteDelegate;
 	FDelegateHandle StartSessionCompleteDelegateHandle;
+
+	FName CurrentSessionName;
 };

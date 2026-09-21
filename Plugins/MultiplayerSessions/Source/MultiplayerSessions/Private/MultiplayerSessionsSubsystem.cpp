@@ -98,6 +98,12 @@ void UMultiplayerSessionsSubsystem::StartSession()
 	if (!SessionInterface.IsValid()) return;
 
 	StartSessionCompleteDelegateHandle = SessionInterface->AddOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegate);
+
+	if (SessionInterface) {
+		if (!SessionInterface->StartSession(CurrentSessionName)) {
+			SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegateHandle);
+		}
+	}
 }
 
 void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, bool bWasSucessfull) {
@@ -106,8 +112,12 @@ void UMultiplayerSessionsSubsystem::OnCreateSessionComplete(FName SessionName, b
 		SessionInterface->ClearOnCreateSessionCompleteDelegate_Handle(CreateSessionCompleteDelegateHandle);
 	}
 
+	CurrentSessionName = SessionName;
+
 	if (bWasSucessfull) {
 		UE_LOG(LogTemp, Display, TEXT("[Online] Successfully created session with name"));
+
+
 
 		UWorld* World = GetWorld();
 		if (World)
@@ -220,7 +230,14 @@ void UMultiplayerSessionsSubsystem::OnStartSessionComplete(FName SessionName, bo
 	SessionInterface->ClearOnStartSessionCompleteDelegate_Handle(StartSessionCompleteDelegateHandle);
 
 	if (bWasSucessfull) {
-		UE_LOG(LogTemp, Display, TEXT("[Online] Successfully started the session"));
+		if (GEngine) {
+			GEngine->AddOnScreenDebugMessage(
+				-1,
+				60.f,
+				FColor::Green,
+				FString::Printf(TEXT("Game Session Started Successfully"))
+			);
+		}
 	}
 	else
 	{
