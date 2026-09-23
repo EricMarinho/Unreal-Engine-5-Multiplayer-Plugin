@@ -1,8 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
+#include "Engine/World.h"
+#include "Engine/Engine.h"
+#include "Engine/LocalPlayer.h"
 #include "MultiplayerSessionsSubsystem.h"
 #include "OnlineSubsystem.h"
 #include "OnlineSessionSettings.h"
 #include "Online/OnlineSessionNames.h"
+
 
 UMultiplayerSessionsSubsystem::UMultiplayerSessionsSubsystem() :
 	CreateSessionCompleteDelegate(FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete)),

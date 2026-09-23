@@ -5,6 +5,8 @@
 #include "OnlineSessionSettings.h"
 #include "MultiplayerSettings.h"
 #include "Online/OnlineSessionNames.h"
+#include "Engine/GameInstance.h"
+#include "Engine/Engine.h"
 
 void UMenu::NativeConstruct() {
 	Super::NativeConstruct();
