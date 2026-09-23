@@ -61,12 +61,18 @@ void UMenu::MenuSetup(int32 NumberOfPulbicConnections, FString TypeOfMatch) {
 }
 
 void UMenu::HostButtonClicked() {
+
+	HostButton->SetIsEnabled(false);
+
 	if (MultiplayerSubsessionSystem) {
 		MultiplayerSubsessionSystem->CreateSession(NumPublic, MatchType);
 	}
 }
 
 void UMenu::JoinButtonClicked() {
+
+	JoinButton->SetIsEnabled(false);
+
 	if (MultiplayerSubsessionSystem) {
 		MultiplayerSubsessionSystem->FindSessions(10000);
 	}
@@ -110,6 +116,8 @@ void UMenu::OnCreateSession(bool bWasSuccessful) {
 	else {
 		if (GEngine) {
 			GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, FString(TEXT("Falha ao criar sessão!")));
+
+			HostButton->SetIsEnabled(true);
 		}
 	}
 }
@@ -117,17 +125,22 @@ void UMenu::OnCreateSession(bool bWasSuccessful) {
 void UMenu::OnFindSessions(const TArray<FOnlineSessionSearchResult>& SessionResults, bool bWasSuccessful) {
 	if (MultiplayerSubsessionSystem == nullptr) return;
 
-	if (bWasSuccessful && SessionResults.Num() > 0) {
-		// O Menu filtra as sessões procurando uma que bate com o MatchType dele
-		for (auto Result : SessionResults) {
-			FString SettingsValue;
-			Result.Session.SessionSettings.Get(FName("MatchType"), SettingsValue);
+	if (bWasSuccessful) {
+		if (SessionResults.Num() > 0) {
+			// O Menu filtra as sessões procurando uma que bate com o MatchType dele
+			for (auto Result : SessionResults) {
+				FString SettingsValue;
+				Result.Session.SessionSettings.Get(FName("MatchType"), SettingsValue);
 
-			if (SettingsValue == MatchType) {
-				MultiplayerSubsessionSystem->JoinSession(Result);
-				return;
+				if (SettingsValue == MatchType) {
+					MultiplayerSubsessionSystem->JoinSession(Result);
+					return;
+				}
 			}
 		}
+	}
+	else {
+		JoinButton->SetIsEnabled(true);
 	}
 }
 
@@ -140,5 +153,8 @@ void UMenu::OnJoinSession(EOnJoinSessionCompleteResult::Type Result, const FStri
 
 			PlayerController->ClientTravel(Address, ETravelType::TRAVEL_Absolute);
 		}
+	}
+	else {
+		JoinButton->SetIsEnabled(true);
 	}
 }
